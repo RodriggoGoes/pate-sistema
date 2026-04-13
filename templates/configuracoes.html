@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Configurações - PATE {% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-6 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="text-center mb-0">⚙️ Configurações</h3>
+                </div>
+                <div class="card-body">
+                    <h5>👤 Usuário: {{ session.usuario_nome }}</h5>
+                    <p class="text-muted">Email: {{ session.usuario_email }}</p>
+                    <p class="text-muted">Tipo: {% if session.usuario_tipo == 'admin' %}Administrador{% else %}Operador{% endif %}</p>
+                    
+                    <hr>
+                    
+                    <h5>🏥 Unidade Executora Padrão</h5>
+                    <div class="alert alert-info" id="unidadeInfo">
+                        <strong>Nome:</strong> <span id="unidadeNome">{{ session.unidade_nome or 'Não definida' }}</span><br>
+                        <strong>Município:</strong> <span id="unidadeMunicipio">{{ session.unidade_municipio or '-' }}</span><br>
+                        <strong>CNES:</strong> <span id="unidadeCnes">{{ session.unidade_cnes or '-' }}</span>
+                    </div>
+                    <p class="text-muted small">⚠️ A unidade selecionada será usada automaticamente no cadastro de pacientes.</p>
+                    
+                    <div class="mb-3">
+                        <label>Selecionar Unidade Executora Padrão</label>
+                        <select id="unidadeSelect" class="form-control">
+                            <option value="">Selecione uma unidade...</option>
+                        </select>
+                        <button class="btn btn-primary mt-2" onclick="salvarUnidadePadrao()">
+                            💾 Salvar como Padrão
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h5>🔒 Alterar Senha</h5>
+                    <div class="mb-3">
+                        <label>Senha Atual</label>
+                        <input type="password" id="senha_atual" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Nova Senha</label>
+                        <input type="password" id="nova_senha" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Confirmar Nova Senha</label>
+                        <input type="password" id="confirmar_senha" class="form-control">
+                    </div>
+                    <button class="btn btn-warning" onclick="alterarSenha()">Alterar Senha</button>
+                    
+                    <hr>
+                    
+                    <button class="btn btn-danger" onclick="logout()">🚪 Sair do Sistema</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function carregarUnidades() {
+    try {
+        const response = await fetch('/api/unidades');
+        const unidades = await response.json();
+        
+        const select = document.getElementById('unidadeSelect');
+        select.innerHTML = '<option value="">Selecione uma unidade...</option>';
+        
+        const unidadeAtualId = '{{ session.unidade_id }}';
+        
+        for (const unidade of unidades) {
+            const option = document.createElement('option');
+            option.value = unidade._id;
+            option.textContent = `${unidade.nome} - ${unidade.municipio}`;
+            if (unidade._id === unidadeAtualId) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+async function salvarUnidadePadrao() {
+    const unidadeId = document.getElementById('unidadeSelect').value;
+    
+    if (!unidadeId) {
+        alert('⚠️ Selecione uma unidade primeiro!');
+        return;
+    }
+    
+    // Obter nome da unidade selecionada
+    const select = document.getElementById('unidadeSelect');
+    const selectedOption = select.options[select.selectedIndex];
+    const unidadeNome = selectedOption.textContent.split(' - ')[0];
+    
+    if (confirm(`Deseja definir "${unidadeNome}" como sua unidade padrão?\n\nTodos os novos pacientes serão cadastrados com esta unidade.`)) {
+        try {
+            const response = await fetch('/api/usuario/unidade_padrao', {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({unidade_id: unidadeId})
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert('✅ Unidade padrão salva com sucesso!');
+                // Atualizar informações na tela
+                document.getElementById('unidadeNome').textContent = result.unidade.nome;
+                document.getElementById('unidadeMunicipio').textContent = result.unidade.municipio;
+                document.getElementById('unidadeCnes').textContent = result.unidade.cnes;
+                
+                // Salvar no localStorage para usar no formulário
+                localStorage.setItem('unidade_selecionada', JSON.stringify(result.unidade));
+            } else {
+                alert('❌ Erro: ' + result.erro);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            alert('❌ Erro ao salvar unidade padrão');
+        }
+    }
+}
+
+async function alterarSenha() {
+    const senhaAtual = document.getElementById('senha_atual').value;
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = document.getElementById('confirmar_senha').value;
+    
+    if (!senhaAtual || !novaSenha) {
+        alert('⚠️ Preencha todos os campos');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        alert('⚠️ As novas senhas não coincidem');
+        return;
+    }
+    
+    if (novaSenha.length < 6) {
+        alert('⚠️ A nova senha deve ter pelo menos 6 caracteres');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/usuario/senha', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                senha_atual: senhaAtual,
+                nova_senha: novaSenha
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('✅ Senha alterada com sucesso!');
+            document.getElementById('senha_atual').value = '';
+            document.getElementById('nova_senha').value = '';
+            document.getElementById('confirmar_senha').value = '';
+        } else {
+            alert('❌ Erro: ' + result.erro);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao alterar senha');
+    }
+}
+
+function logout() {
+    if (confirm('Tem certeza que deseja sair do sistema?')) {
+        window.location.href = '/logout';
+    }
+}
+
+carregarUnidades();
+</script>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Unidades Executoras - PATE{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="text-center mb-0">🏥 Unidades Executoras</h3>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUnidade">
+                    ➕ Nova Unidade
+                </button>
+                <button class="btn btn-info" onclick="carregarUnidades()">
+                    🔄 Atualizar
+                </button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Município</th>
+                            <th>CNES</th>
+                            <th>CNPJ</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaUnidades">
+                        <tr><td colspan="6" class="text-center">Carregando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Nova Unidade -->
+<div class="modal fade" id="modalUnidade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Nova Unidade Executora</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUnidade">
+                    <div class="mb-3">
+                        <label>Nome da Unidade *</label>
+                        <input type="text" id="nome_unidade" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Município *</label>
+                        <input type="text" id="municipio_unidade" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>CNES</label>
+                        <input type="text" id="cnes_unidade" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>CNPJ</label>
+                        <input type="text" id="cnpj_unidade" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Endereço</label>
+                        <input type="text" id="endereco_unidade" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Telefone</label>
+                        <input type="text" id="telefone_unidade" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Responsável</label>
+                        <input type="text" id="responsavel_unidade" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarUnidade()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function carregarUnidades() {
+    try {
+        const response = await fetch('/api/unidades/todas');
+        const unidades = await response.json();
+        
+        const tbody = document.getElementById('tabelaUnidades');
+        tbody.innerHTML = '';
+        
+        for (const unidade of unidades) {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = unidade.nome;
+            row.insertCell(1).textContent = unidade.municipio;
+            row.insertCell(2).textContent = unidade.cnes || '-';
+            row.insertCell(3).textContent = unidade.cnpj || '-';
+            row.insertCell(4).innerHTML = unidade.ativa ? 
+                '<span class="badge bg-success">Ativa</span>' : 
+                '<span class="badge bg-danger">Inativa</span>';
+            
+            const acoes = row.insertCell(5);
+            if (unidade.ativa) {
+                acoes.innerHTML = `<button class="btn btn-sm btn-danger" onclick="desativarUnidade('${unidade._id}')">🗑️ Desativar</button>`;
+            } else {
+                acoes.innerHTML = '<span class="text-muted">Inativa</span>';
+            }
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+async function salvarUnidade() {
+    const dados = {
+        nome: document.getElementById('nome_unidade').value,
+        municipio: document.getElementById('municipio_unidade').value,
+        cnes: document.getElementById('cnes_unidade').value,
+        cnpj: document.getElementById('cnpj_unidade').value,
+        endereco: document.getElementById('endereco_unidade').value,
+        telefone: document.getElementById('telefone_unidade').value,
+        responsavel: document.getElementById('responsavel_unidade').value
+    };
+    
+    if (!dados.nome || !dados.municipio) {
+        alert('Nome e Município são obrigatórios!');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/unidades', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('Unidade criada com sucesso!');
+            bootstrap.Modal.getInstance(document.getElementById('modalUnidade')).hide();
+            document.getElementById('formUnidade').reset();
+            carregarUnidades();
+        } else {
+            alert('Erro: ' + result.erro);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao salvar unidade');
+    }
+}
+
+async function desativarUnidade(unidadeId) {
+    if (confirm('Tem certeza que deseja desativar esta unidade?')) {
+        try {
+            const response = await fetch(`/api/unidades/${unidadeId}/desativar`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert('Unidade desativada com sucesso!');
+                carregarUnidades();
+            } else {
+                alert('Erro: ' + result.erro);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+        }
+    }
+}
+
+carregarUnidades();
+</script>
+{% endblock %}

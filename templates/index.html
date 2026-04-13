@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Cadastro de Pacientes - PATE{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="text-center mb-0">📝 Cadastro de Pacientes - Procedimentos Oftalmológicos</h3>
+            <p class="text-center mb-0 mt-2">PATE - Programa de Atendimento Terciário Especializado</p>
+        </div>
+        <div class="card-body">
+            <form id="formPaciente">
+                <!-- Unidade Executora (fixa - do usuário logado) -->
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="alert alert-info" id="unidadeInfoContainer">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <label class="form-label"><strong>🏥 Unidade Executora</strong></label>
+                                    <div id="unidadeInfo" class="mt-2">
+                                        <div class="d-flex align-items-center">
+                                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                                                <span class="visually-hidden">Carregando...</span>
+                                            </div>
+                                            <span>Carregando unidade...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    {% if session.usuario_tipo == 'admin' %}
+                                    <a href="/unidades" class="btn btn-sm btn-outline-primary" target="_blank">
+                                        ⚙️ Gerenciar Unidades
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Campos do paciente -->
+                <div class="row">
+                    <div class="col-md-12 mb-3">
+                        <label class="form-label">Nome Completo do Paciente *</label>
+                        <input type="text" id="nome" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">CPF *</label>
+                        <div class="input-group">
+                            <input type="text" id="cpf" class="form-control" placeholder="000.000.000-00" required>
+                            <button class="btn btn-outline-secondary" type="button" onclick="buscarPaciente()">
+                                🔍 Buscar
+                            </button>
+                        </div>
+                        <small class="text-muted">Digite o CPF e clique em buscar para verificar se paciente já existe</small>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Data de Nascimento *</label>
+                        <input type="date" id="data_nascimento" class="form-control" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Idade</label>
+                        <input type="text" id="idade" class="form-control" readonly>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Data da Realização *</label>
+                        <input type="date" id="data_realizacao" class="form-control" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Nome da Mãe *</label>
+                        <input type="text" id="nome_mae" class="form-control" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Sexo *</label>
+                        <select id="sexo" class="form-control" required>
+                            <option value="">Selecione</option>
+                            <option value="MASCULINO">Masculino</option>
+                            <option value="FEMININO">Feminino</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Raça/Cor *</label>
+                        <select id="raca_cor" class="form-control" required>
+                            <option value="">Selecione</option>
+                            <option value="01">01 - Branca</option>
+                            <option value="03">03 - Parda</option>
+                            <option value="02">02 - Preta</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">Olho *</label>
+                        <select id="olho" class="form-control" required>
+                            <option value="">Selecione</option>
+                            <option value="OD">Olho Direito</option>
+                            <option value="OE">Olho Esquerdo</option>
+                            <option value="AMBOS">Ambos os Olhos</option>
+                            <option value="SEM">Sem Indicação Cirúrgica</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- NOVOS CAMPOS: Endereço, Bairro, CEP, Contato -->
+                <div class="row">
+                    <div class="col-md-12">
+                        <hr>
+                        <h5>📍 Informações de Contato</h5>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Endereço</label>
+                        <input type="text" id="endereco" class="form-control" placeholder="Rua, número, complemento">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Bairro</label>
+                        <input type="text" id="bairro" class="form-control" placeholder="Bairro">
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">CEP</label>
+                        <input type="text" id="cep" class="form-control" placeholder="00000-000" maxlength="9">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Contato (Telefone/Celular)</label>
+                        <input type="text" id="contato" class="form-control" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+
+                <!-- OCI/PMAE -->
+                <div class="oci-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 10px; padding: 15px; margin-bottom: 20px;">
+                    <h5>🏷️ OCI / PMAE Cirurgia Ofertados</h5>
+                    <p class="mb-2">Selecione o tipo de procedimento ofertado:</p>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="oci_tipo" id="oci_avaliacao" value="09.05.01.003-5">
+                                <label class="form-check-label" for="oci_avaliacao">
+                                    <strong>09.05.01.003-5</strong> - OCI DE AVALIAÇÃO INICIAL EM OFTALMOLOGIA
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="oci_tipo" id="oci_cirurgia" value="04.05.05.037-2">
+                                <label class="form-check-label" for="oci_cirurgia">
+                                    <strong>04.05.05.037-2</strong> - FACOEMULSIFICAÇÃO COM IMPLANTE DE LENTE
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Procedimentos Avaliação -->
+                <div id="procedimentos_avaliacao" class="procedimentos-group" style="display: none;">
+                    <h5>📋 Procedimentos de Avaliação Inicial</h5>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="procedimento-check" value="03.01.01.007-2" data-procedimento="03.01.01.007-2 - CONSULTA MÉDICA EM ATENÇÃO ESPECIALIZADA">
+                        <strong>03.01.01.007-2</strong> - CONSULTA MÉDICA EM ATENÇÃO ESPECIALIZADA
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="procedimento-check" value="02.11.06.023-2" data-procedimento="02.11.06.023-2 - TESTE ORTÓPTERO">
+                        <strong>02.11.06.023-2</strong> - TESTE ORTÓPTERO
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="procedimento-check" value="02.11.06.012-7" data-procedimento="02.11.06.012-7 - MAPEAMENTO DE RETINA">
+                        <strong>02.11.06.012-7</strong> - MAPEAMENTO DE RETINA
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="procedimento-check" value="02.11.06.025-9" data-procedimento="02.11.06.025-9 - TONOMETRIA">
+                        <strong>02.11.06.025-9</strong> - TONOMETRIA
+                    </div>
+                    <div class="checklist-item">
+                        <input type="checkbox" class="procedimento-check" value="02.11.06.002-0" data-procedimento="02.11.06.002-0 - BIOMICROSCOPIA DE FUNDO DE OLHO">
+                        <strong>02.11.06.002-0</strong> - BIOMICROSCOPIA DE FUNDO DE OLHO
+                    </div>
+                </div>
+
+                <!-- Procedimentos Cirurgia -->
+                <div id="procedimentos_cirurgia" class="procedimentos-group" style="display: none;">
+                    <h5>🔧 Procedimento Cirúrgico</h5>
+                    <div class="alert alert-success">
+                        <input type="checkbox" id="procedimento_cirurgia" value="04.05.05.037-2" data-procedimento="04.05.05.037-2 - FACOEMULSIFICAÇÃO COM IMPLANTE DE LENTE" checked>
+                        <strong>04.05.05.037-2</strong> - FACOEMULSIFICAÇÃO COM IMPLANTE DE LENTE INTRA-OCULAR DOBRAVEL
+                    </div>
+                </div>
+
+                <input type="hidden" id="oci_pmae" value="">
+
+                <div class="text-center mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg px-5">
+                        💾 Cadastrar Paciente
+                    </button>
+                </div>
+                
+                <div id="mensagem" class="mt-3"></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+{% endblock %}

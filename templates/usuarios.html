@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+
+{% block title %}Usuários - PATE{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="text-center mb-0">👥 Gerenciar Usuários</h3>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalUsuario">
+                    ➕ Novo Usuário
+                </button>
+                <button class="btn btn-info" onclick="carregarUsuarios()">
+                    🔄 Atualizar
+                </button>
+            </div>
+            
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>Email</th>
+                            <th>Tipo</th>
+                            <th>Unidade</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaUsuarios">
+                        <tr><td colspan="6" class="text-center">Carregando...<\/td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Novo Usuário -->
+<div class="modal fade" id="modalUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Novo Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formUsuario">
+                    <div class="mb-3">
+                        <label>Nome *</label>
+                        <input type="text" id="nome_usuario" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Email *</label>
+                        <input type="email" id="email_usuario" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Senha *</label>
+                        <input type="password" id="senha_usuario" class="form-control" required>
+                        <small class="text-muted">Mínimo 6 caracteres</small>
+                    </div>
+                    <div class="mb-3">
+                        <label>Tipo *</label>
+                        <select id="tipo_usuario" class="form-control" required>
+                            <option value="operador">Operador (Apenas Cadastro)</option>
+                            <option value="admin">Administrador (Acesso Total)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Unidade Executora</label>
+                        <select id="unidade_usuario" class="form-control">
+                            <option value="">Selecione uma unidade...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarUsuario()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Resetar Senha -->
+<div class="modal fade" id="modalResetSenha" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">🔐 Resetar Senha</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Resetando senha para: <strong id="resetUsuarioNome"></strong></p>
+                <form id="formResetSenha">
+                    <div class="mb-3">
+                        <label>Nova Senha</label>
+                        <input type="password" id="nova_senha" class="form-control" placeholder="Digite a nova senha" required>
+                        <small class="text-muted">Mínimo 6 caracteres</small>
+                    </div>
+                    <div class="mb-3">
+                        <label>Confirmar Nova Senha</label>
+                        <input type="password" id="confirmar_nova_senha" class="form-control" placeholder="Digite a senha novamente" required>
+                    </div>
+                    <input type="hidden" id="resetUsuarioId">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-warning" onclick="resetarSenha()">Resetar Senha</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function carregarUsuarios() {
+    try {
+        const response = await fetch('/api/usuarios');
+        const usuarios = await response.json();
+        
+        const tbody = document.getElementById('tabelaUsuarios');
+        tbody.innerHTML = '';
+        
+        for (const usuario of usuarios) {
+            const row = tbody.insertRow();
+            row.insertCell(0).textContent = usuario.nome;
+            row.insertCell(1).textContent = usuario.email;
+            row.insertCell(2).innerHTML = usuario.tipo === 'admin' ? 
+                '<span class="badge bg-danger">Admin</span>' : 
+                '<span class="badge bg-info">Operador</span>';
+            row.insertCell(3).textContent = usuario.unidade_nome || '-';
+            row.insertCell(4).innerHTML = usuario.ativo ? 
+                '<span class="badge bg-success">Ativo</span>' : 
+                '<span class="badge bg-danger">Inativo</span>';
+            
+            const acoes = row.insertCell(5);
+            acoes.innerHTML = `
+                <button class="btn btn-sm btn-warning me-1" onclick="abrirModalReset('${usuario._id}', '${usuario.nome}')">
+                    🔑 Resetar Senha
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="desativarUsuario('${usuario._id}')">
+                    🗑️ Desativar
+                </button>
+            `;
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        document.getElementById('tabelaUsuarios').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar usuários</td></tr>';
+    }
+}
+
+function abrirModalReset(usuarioId, usuarioNome) {
+    document.getElementById('resetUsuarioId').value = usuarioId;
+    document.getElementById('resetUsuarioNome').textContent = usuarioNome;
+    document.getElementById('nova_senha').value = '';
+    document.getElementById('confirmar_nova_senha').value = '';
+    
+    new bootstrap.Modal(document.getElementById('modalResetSenha')).show();
+}
+
+async function resetarSenha() {
+    const usuarioId = document.getElementById('resetUsuarioId').value;
+    const novaSenha = document.getElementById('nova_senha').value;
+    const confirmarSenha = document.getElementById('confirmar_nova_senha').value;
+    
+    if (!novaSenha) {
+        alert('Digite uma nova senha');
+        return;
+    }
+    
+    if (novaSenha !== confirmarSenha) {
+        alert('As senhas não coincidem');
+        return;
+    }
+    
+    if (novaSenha.length < 6) {
+        alert('A senha deve ter pelo menos 6 caracteres');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/usuarios/${usuarioId}/resetar_senha`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({nova_senha: novaSenha})
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('✅ Senha alterada com sucesso!');
+            bootstrap.Modal.getInstance(document.getElementById('modalResetSenha')).hide();
+            carregarUsuarios();
+        } else {
+            alert('❌ Erro: ' + result.erro);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('❌ Erro ao resetar senha');
+    }
+}
+
+async function carregarUnidades() {
+    try {
+        const response = await fetch('/api/unidades');
+        const unidades = await response.json();
+        
+        const select = document.getElementById('unidade_usuario');
+        select.innerHTML = '<option value="">Selecione uma unidade...</option>';
+        
+        for (const unidade of unidades) {
+            const option = document.createElement('option');
+            option.value = unidade._id;
+            option.textContent = `${unidade.nome} - ${unidade.municipio}`;
+            select.appendChild(option);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+    }
+}
+
+async function salvarUsuario() {
+    const dados = {
+        nome: document.getElementById('nome_usuario').value,
+        email: document.getElementById('email_usuario').value,
+        senha: document.getElementById('senha_usuario').value,
+        tipo: document.getElementById('tipo_usuario').value,
+        unidade_id: document.getElementById('unidade_usuario').value
+    };
+    
+    if (!dados.nome || !dados.email || !dados.senha) {
+        alert('Preencha todos os campos obrigatórios!');
+        return;
+    }
+    
+    if (dados.senha.length < 6) {
+        alert('A senha deve ter pelo menos 6 caracteres');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/usuarios', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(dados)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('Usuário criado com sucesso!');
+            bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
+            document.getElementById('formUsuario').reset();
+            carregarUsuarios();
+        } else {
+            alert('Erro: ' + result.erro);
+        }
+    } catch (error) {
+        console.error('Erro:', error);
+        alert('Erro ao salvar usuário');
+    }
+}
+
+async function desativarUsuario(usuarioId) {
+    if (confirm('Tem certeza que deseja desativar este usuário?')) {
+        try {
+            const response = await fetch(`/api/usuarios/${usuarioId}`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok) {
+                alert('Usuário desativado com sucesso!');
+                carregarUsuarios();
+            } else {
+                alert('Erro: ' + result.erro);
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+        }
+    }
+}
+
+carregarUsuarios();
+carregarUnidades();
+</script>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Sobre - PATE{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="text-center mb-0">ℹ️ Sobre o Sistema</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>🏥 PATE</h5>
+                    <p>Sistema de registro de procedimentos oftalmológicos do Programa de Atendimento Terciário Especializado.</p>
+                    
+                    <h5 class="mt-4">📋 Funcionalidades</h5>
+                    <ul>
+                        <li>Cadastro completo de pacientes</li>
+                        <li>OCI/PMAE dinâmico com dois tipos</li>
+                        <li>Seleção múltipla de procedimentos</li>
+                        <li>Dashboard com gráficos estatísticos</li>
+                        <li>Exportação para Excel e CSV</li>
+                        <li>Relatórios filtrados por tipo</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h5>🛠️ Tecnologias</h5>
+                    <ul>
+                        <li>Python 3.8+ / Flask</li>
+                        <li>MongoDB</li>
+                        <li>Bootstrap 5</li>
+                        <li>Chart.js</li>
+                        <li>Pandas / OpenPyXL</li>
+                    </ul>
+                    
+                    <h5 class="mt-4">📞 Contato</h5>
+                    <p><strong>Developer:</strong> RODRIGO GÓES<br>
+                    <strong>Município:</strong> ITACOATIARA<br>
+                    <strong>Contato:</strong> (92) 99177-7128</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
