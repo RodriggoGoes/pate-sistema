@@ -1,0 +1,550 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Pacientes - PATE{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">👥 Gerenciamento de Pacientes</h3>
+            <p class="mb-0 mt-1">Visualize, edite e gerencie todos os pacientes cadastrados</p>
+        </div>
+        <div class="card-body">
+            <!-- Filtros -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">🔍 Buscar (CPF ou Nome)</label>
+                    <div class="input-group">
+                        <input type="text" id="buscarTexto" class="form-control" placeholder="Digite CPF ou nome do paciente">
+                        <button class="btn btn-primary" onclick="aplicarFiltros()">🔍 Buscar</button>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">📋 Filtrar por Unidade</label>
+                    <select id="filtroUnidade" class="form-control">
+                        <option value="">Todas as Unidades</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">📅 Período</label>
+                    <select id="filtroPeriodo" class="form-control">
+                        <option value="">Todos</option>
+                        <option value="7">Últimos 7 dias</option>
+                        <option value="30">Últimos 30 dias</option>
+                        <option value="90">Últimos 90 dias</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tabela de Pacientes -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>Data Nasc.</th>
+                            <th>Unidade</th>
+                            <th>Procedimentos</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaPacientesGerenciar">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <span class="skeleton skeleton-text" style="width:60%"></span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="paginacaoPacientes" class="pagination-controls">
+                <span class="page-info" id="pageInfoPacientes">Carregando...</span>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-outline-primary" id="btnPagAnt" onclick="paginaAnterior()" disabled>◀ Anterior</button>
+                    <button class="btn btn-sm btn-outline-primary" id="btnPagProx" onclick="paginaProxima()" disabled>Próxima ▶</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Edição de Paciente -->
+<div class="modal fade" id="modalEditarPaciente" tabindex="-1" style="z-index: 1060;">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">✏️ Editar Paciente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <form id="formEditarPaciente">
+                    <input type="hidden" id="editPacienteId">
+
+                    <!-- Identificação -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5 class="text-primary">🆔 Identificação do Paciente</h5>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome Completo *</label>
+                            <input type="text" id="editNome" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">CPF *</label>
+                            <input type="text" id="editCpf" class="form-control" required>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Data de Nascimento *</label>
+                            <input type="date" id="editDataNascimento" class="form-control" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nome da Mãe *</label>
+                            <input type="text" id="editNomeMae" class="form-control" required>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Sexo</label>
+                            <select id="editSexo" class="form-control">
+                                <option value="MASCULINO">Masculino</option>
+                                <option value="FEMININO">Feminino</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Raça/Cor</label>
+                            <select id="editRacaCor" class="form-control">
+                                <option value="01">01 - Branca</option>
+                                <option value="02">02 - Preta</option>
+                                <option value="03">03 - Parda</option>
+                                <option value="04">04 - Indígena</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Olho</label>
+                            <select id="editOlho" class="form-control">
+                                <option value="OD">Olho Direito</option>
+                                <option value="OE">Olho Esquerdo</option>
+                                <option value="AMBOS">Ambos os Olhos</option>
+                                <option value="SEM">Sem Indicação Cirúrgica</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Contato -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5 class="text-primary mt-2">📍 Contato</h5>
+                            <hr>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Endereço</label>
+                            <input type="text" id="editEndereco" class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Bairro</label>
+                            <input type="text" id="editBairro" class="form-control">
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">CEP</label>
+                            <input type="text" id="editCep" class="form-control">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Contato (Telefone/Celular)</label>
+                            <input type="text" id="editContato" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">CNS</label>
+                            <input type="text" id="editCns" class="form-control">
+                        </div>
+                    </div>
+
+                    <!-- Procedimentos Existentes -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h5 class="text-primary mt-2">📋 Procedimentos Cadastrados</h5>
+                            <hr>
+                        </div>
+                    </div>
+                    <div id="editProcedimentosExistentes" class="mb-3">
+                        <p class="text-muted">Nenhum procedimento cadastrado</p>
+                    </div>
+
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" onclick="excluirPaciente()">🗑️ Excluir Paciente</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarEdicaoPaciente()">💾 Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    var pacientesData = [];
+    var unidadesList = [];
+    var paginaAtual = 1;
+    var ITENS_POR_PAGINA = 20;
+    var pacientesFiltrados = [];
+
+    function formatarCpf(cpf) {
+        if (!cpf || cpf.length !== 11) return cpf || '-';
+        return cpf.substring(0,3) + '.' + cpf.substring(3,6) + '.' + cpf.substring(6,9) + '-' + cpf.substring(9);
+    }
+
+    function esc(str) {
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(str || ''));
+        return div.innerHTML;
+    }
+
+    async function carregarUnidadesFiltro() {
+        try {
+            var response = await fetch('/api/unidades');
+            unidadesList = await response.json();
+            var select = document.getElementById('filtroUnidade');
+            unidadesList.forEach(function(unidade) {
+                var option = document.createElement('option');
+                option.value = unidade._id;
+                option.textContent = unidade.nome + ' - ' + (unidade.municipio || '');
+                select.appendChild(option);
+            });
+        } catch (error) {
+            console.error('Erro ao carregar unidades:', error);
+        }
+    }
+
+    async function carregarUnidadesModal() {
+        try {
+            if (unidadesList.length === 0) {
+                var response = await fetch('/api/unidades');
+                unidadesList = await response.json();
+            }
+        } catch (error) {
+            console.error('Erro ao carregar unidades:', error);
+        }
+    }
+
+    function renderizarProcedimentos(paciente) {
+        var container = document.getElementById('editProcedimentosExistentes');
+        var procs = paciente.procedimentos || [];
+
+        if (procs.length === 0) {
+            container.innerHTML = '<p class="text-muted">Nenhum procedimento cadastrado</p>';
+            return;
+        }
+
+        var html = '<div class="table-responsive"><table class="table table-sm table-bordered"><thead class="table-secondary"><tr><th>Procedimento</th><th>Data</th><th>Olho</th><th>Unidade Executora</th><th style="width:200px">A\u00e7\u00e3o</th></tr></thead><tbody>';
+
+        procs.forEach(function(proc, idx) {
+            var nomeProc = typeof proc === 'string' ? proc : (proc.nome || '');
+            var dataProc = typeof proc === 'string' ? paciente.data_realizacao : (proc.data_realizacao || paciente.data_realizacao || '');
+            var olhoProc = typeof proc === 'string' ? paciente.olho : (proc.olho || paciente.olho || '');
+
+            var nomeCurto = nomeProc;
+            if (nomeProc.indexOf(' - ') !== -1) {
+                nomeCurto = nomeProc.split(' - ').slice(1).join(' - ');
+            }
+
+            var dateId = 'procDate_' + idx;
+            var olhoId = 'procOlho_' + idx;
+            var unitId = 'procUnit_' + idx;
+
+            html += '<tr>' +
+                '<td><small>' + esc(nomeCurto) + '</small></td>' +
+                '<td><input type="date" id="' + dateId + '" class="form-control form-control-sm" value="' + esc(dataProc) + '"></td>' +
+                '<td><select id="' + olhoId + '" class="form-select form-select-sm">' +
+                    '<option value="OD"' + (olhoProc === 'OD' ? ' selected' : '') + '>Olho Direito</option>' +
+                    '<option value="OE"' + (olhoProc === 'OE' ? ' selected' : '') + '>Olho Esquerdo</option>' +
+                    '<option value="AMBOS"' + (olhoProc === 'AMBOS' ? ' selected' : '') + '>Ambos</option>' +
+                    '<option value="SEM"' + (olhoProc === 'SEM' ? ' selected' : '') + '>Sem indica\u00e7\u00e3o</option>' +
+                '</select></td>' +
+                '<td><select id="' + unitId + '" class="form-select form-select-sm"><option value="">Selecione a unidade</option></select></td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline-primary" onclick="salvarProcedimento(' + idx + ", '" + nomeProc.replace(/'/g, "\\'") + "' )">\uD83D\uDCBE Salvar</button></td>' +
+            '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        container.innerHTML = html;
+
+        procs.forEach(function(proc, idx) {
+            var unitId = 'procUnit_' + idx;
+            var unitSelect = document.getElementById(unitId);
+            if (!unitSelect) return;
+
+            var unidadeAtual = typeof proc === 'string' ? '' : (proc.unidade_id || '');
+
+            unidadesList.forEach(function(unidade) {
+                var option = document.createElement('option');
+                option.value = unidade._id;
+                option.textContent = unidade.nome + ' - ' + (unidade.municipio || '');
+                if (unidade._id === unidadeAtual) option.selected = true;
+                unitSelect.appendChild(option);
+            });
+        });
+    }
+
+    async function salvarProcedimento(idx, nomeProc) {
+        var pacienteId = document.getElementById('editPacienteId').value;
+        if (!pacienteId) return;
+
+        var novaData = document.getElementById('procDate_' + idx).value;
+        var novoOlho = document.getElementById('procOlho_' + idx).value;
+        var novaUnidadeId = document.getElementById('procUnit_' + idx).value;
+
+        var body = { nome_procedimento: nomeProc };
+        if (novaData) body.data_realizacao = novaData;
+        if (novoOlho) body.olho = novoOlho;
+        if (novaUnidadeId) body.unidade_id = novaUnidadeId;
+
+        if (!novaData && !novoOlho && !novaUnidadeId) {
+            showToast('Altere pelo menos um campo para salvar', 'warning');
+            return;
+        }
+
+        try {
+            var response = await fetch('/api/paciente/' + pacienteId + '/procedimento', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+
+            var result = await response.json();
+            if (response.ok) {
+                showToast(result.mensagem, 'success');
+                listarPacientes();
+            } else {
+                showToast(result.erro, 'error');
+            }
+        } catch (error) {
+            console.error('Erro:', error);
+            showToast('Erro ao salvar procedimento', 'error');
+        }
+    }
+
+    async function listarPacientes() {
+        try {
+            var response = await fetch('/api/pacientes/todos');
+            pacientesData = await response.json();
+            paginaAtual = 1;
+            aplicarFiltros();
+        } catch (error) {
+            console.error('Erro ao carregar pacientes:', error);
+        }
+    }
+
+    function aplicarFiltros() {
+        var busca = (document.getElementById('buscarTexto').value || '').toLowerCase().trim();
+        var unidadeId = document.getElementById('filtroUnidade').value;
+        var periodo = document.getElementById('filtroPeriodo').value;
+
+        pacientesFiltrados = [];
+
+        for (var i = 0; i < pacientesData.length; i++) {
+            var p = pacientesData[i];
+            var incluir = true;
+
+            if (unidadeId && p.unidade_id !== unidadeId) incluir = false;
+
+            if (periodo) {
+                var dataCadastro = new Date(p.data_cadastro);
+                var dataLimite = new Date();
+                dataLimite.setDate(dataLimite.getDate() - parseInt(periodo));
+                if (dataCadastro < dataLimite) incluir = false;
+            }
+
+            if (busca) {
+                var nome = (p.nome_completo || '').toLowerCase();
+                var cpf = (p.cpf || '');
+                var cpfFormatado = cpf.replace(/\D/g, '');
+                if (nome.indexOf(busca) === -1 && cpf.indexOf(busca) === -1 && cpfFormatado.indexOf(busca.replace(/\D/g, '')) === -1) {
+                    incluir = false;
+                }
+            }
+
+            if (incluir) pacientesFiltrados.push(p);
+        }
+
+        paginaAtual = 1;
+        renderizarTabela();
+    }
+
+    function renderizarTabela() {
+        var tbody = document.getElementById('tabelaPacientesGerenciar');
+        tbody.innerHTML = '';
+
+        var totalPaginas = Math.ceil(pacientesFiltrados.length / ITENS_POR_PAGINA) || 1;
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+        var inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+        var fim = Math.min(inicio + ITENS_POR_PAGINA, pacientesFiltrados.length);
+        var paginaDados = pacientesFiltrados.slice(inicio, fim);
+
+        if (paginaDados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">Nenhum paciente encontrado</td></tr>';
+        } else {
+            for (var i = 0; i < paginaDados.length; i++) {
+                var p = paginaDados[i];
+                var row = tbody.insertRow();
+                row.insertCell(0).textContent = p.nome_completo || '-';
+                row.insertCell(1).textContent = formatarCpf(p.cpf);
+                row.insertCell(2).textContent = p.data_nascimento || '-';
+
+                var unidadeNome = p.nome_estabelecimento || '-';
+                if (p.unidade_id && unidadesList.length > 0) {
+                    for (var u = 0; u < unidadesList.length; u++) {
+                        if (unidadesList[u]._id === p.unidade_id) {
+                            unidadeNome = unidadesList[u].nome;
+                            break;
+                        }
+                    }
+                }
+                row.insertCell(3).textContent = unidadeNome;
+                row.insertCell(4).textContent = p.procedimentos ? p.procedimentos.length : 0;
+
+                var acoes = row.insertCell(5);
+                var btnEdit = document.createElement('button');
+                btnEdit.className = 'btn btn-sm btn-primary me-1';
+                btnEdit.innerHTML = '\u270F\uFE0F Editar';
+                btnEdit.onclick = (function(pac) {
+                    return function() { abrirModalEdicao(pac); };
+                })(p);
+                acoes.appendChild(btnEdit);
+            }
+        }
+
+        document.getElementById('pageInfoPacientes').textContent = pacientesFiltrados.length + ' paciente(s) - P\u00e1gina ' + paginaAtual + ' de ' + totalPaginas + ' (20 por p\u00e1gina)';
+        document.getElementById('btnPagAnt').disabled = paginaAtual <= 1;
+        document.getElementById('btnPagProx').disabled = paginaAtual >= totalPaginas;
+    }
+
+    function paginaAnterior() {
+        if (paginaAtual > 1) { paginaAtual--; renderizarTabela(); }
+    }
+
+    function paginaProxima() {
+        var totalPaginas = Math.ceil(pacientesFiltrados.length / ITENS_POR_PAGINA);
+        if (paginaAtual < totalPaginas) { paginaAtual++; renderizarTabela(); }
+    }
+
+    async function abrirModalEdicao(paciente) {
+        await carregarUnidadesModal();
+
+        document.getElementById('editPacienteId').value = paciente._id || '';
+        document.getElementById('editNome').value = paciente.nome_completo || '';
+        document.getElementById('editCpf').value = formatarCpf(paciente.cpf);
+        document.getElementById('editDataNascimento').value = paciente.data_nascimento || '';
+        document.getElementById('editNomeMae').value = paciente.nome_mae || '';
+        document.getElementById('editSexo').value = paciente.sexo || 'MASCULINO';
+        document.getElementById('editRacaCor').value = paciente.raca_cor || '01';
+        document.getElementById('editOlho').value = paciente.olho || 'OD';
+        document.getElementById('editEndereco').value = paciente.endereco || '';
+        document.getElementById('editBairro').value = paciente.bairro || '';
+        document.getElementById('editCep').value = paciente.cep || '';
+        document.getElementById('editContato').value = paciente.contato || '';
+        document.getElementById('editCns').value = paciente.cns || '';
+
+        renderizarProcedimentos(paciente);
+        new bootstrap.Modal(document.getElementById('modalEditarPaciente')).show();
+    }
+
+    async function salvarEdicaoPaciente() {
+        var pacienteId = document.getElementById('editPacienteId').value;
+
+        if (!pacienteId) {
+            showToast('ID do paciente n\u00e3o encontrado', 'error');
+            return;
+        }
+
+        var dados = {
+            nome_completo: document.getElementById('editNome').value.toUpperCase(),
+            cpf: document.getElementById('editCpf').value.replace(/\D/g, ''),
+            data_nascimento: document.getElementById('editDataNascimento').value,
+            nome_mae: document.getElementById('editNomeMae').value.toUpperCase(),
+            sexo: document.getElementById('editSexo').value,
+            raca_cor: document.getElementById('editRacaCor').value,
+            olho: document.getElementById('editOlho').value,
+            endereco: document.getElementById('editEndereco').value,
+            bairro: document.getElementById('editBairro').value,
+            cep: document.getElementById('editCep').value,
+            contato: document.getElementById('editContato').value,
+            cns: document.getElementById('editCns').value
+        };
+
+        try {
+            var response = await fetch('/api/paciente/' + pacienteId, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(dados)
+            });
+
+            var result = await response.json();
+
+            if (response.ok) {
+                showToast('Dados do paciente atualizados com sucesso!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalEditarPaciente')).hide();
+                listarPacientes();
+            } else {
+                showToast(result.erro || 'Erro desconhecido', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            showToast('Erro ao salvar paciente', 'error');
+        }
+    }
+
+    async function excluirPaciente() {
+        if (!confirm('\u26A0\uFE0F Tem certeza que deseja EXCLUIR este paciente? Esta a\u00e7\u00e3o n\u00e3o pode ser desfeita!')) {
+            return;
+        }
+
+        var pacienteId = document.getElementById('editPacienteId').value;
+
+        try {
+            var response = await fetch('/api/paciente/' + pacienteId, {
+                method: 'DELETE'
+            });
+
+            var result = await response.json();
+
+            if (response.ok) {
+                showToast('Paciente exclu\u00eddo com sucesso!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('modalEditarPaciente')).hide();
+                listarPacientes();
+            } else {
+                showToast(result.erro || 'Erro desconhecido', 'error');
+            }
+        } catch (error) {
+            console.error('Erro ao excluir:', error);
+            showToast('Erro ao excluir paciente', 'error');
+        }
+    }
+
+    document.getElementById('buscarTexto').addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') aplicarFiltros();
+    });
+    document.getElementById('filtroUnidade').addEventListener('change', function() { paginaAtual = 1; aplicarFiltros(); });
+    document.getElementById('filtroPeriodo').addEventListener('change', function() { paginaAtual = 1; aplicarFiltros(); });
+
+    carregarUnidadesFiltro();
+    listarPacientes();
+</script>
+
+<style>
+    .modal-xl {
+        max-width: 90%;
+    }
+</style>
+{% endblock %}

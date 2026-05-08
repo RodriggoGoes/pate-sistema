@@ -1,0 +1,28 @@
+version: '3.9'
+
+services:
+  app:
+    build: .
+    container_name: pate_app
+    restart: always
+    ports:
+      - "5002:5002"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/pate_santarem
+      - SECRET_KEY=${SECRET_KEY:-}
+    volumes:
+      - .:/app
+
+  mongo:
+    image: mongo:6
+    container_name: pate_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

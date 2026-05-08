@@ -90,7 +90,7 @@ async function salvarUnidadePadrao() {
     const unidadeId = document.getElementById('unidadeSelect').value;
     
     if (!unidadeId) {
-        alert('⚠️ Selecione uma unidade primeiro!');
+        showToast('Selecione uma unidade primeiro!', 'warning');
         return;
     }
     
@@ -110,7 +110,7 @@ async function salvarUnidadePadrao() {
             const result = await response.json();
             
             if (response.ok) {
-                alert('✅ Unidade padrão salva com sucesso!');
+                showToast('Unidade padrão salva com sucesso!', 'success');
                 // Atualizar informações na tela
                 document.getElementById('unidadeNome').textContent = result.unidade.nome;
                 document.getElementById('unidadeMunicipio').textContent = result.unidade.municipio;
@@ -119,11 +119,11 @@ async function salvarUnidadePadrao() {
                 // Salvar no localStorage para usar no formulário
                 localStorage.setItem('unidade_selecionada', JSON.stringify(result.unidade));
             } else {
-                alert('❌ Erro: ' + result.erro);
+                showToast(result.erro, 'error');
             }
         } catch (error) {
             console.error('Erro:', error);
-            alert('❌ Erro ao salvar unidade padrão');
+            showToast('Erro ao salvar unidade padrão', 'error');
         }
     }
 }
@@ -134,17 +134,17 @@ async function alterarSenha() {
     const confirmarSenha = document.getElementById('confirmar_senha').value;
     
     if (!senhaAtual || !novaSenha) {
-        alert('⚠️ Preencha todos os campos');
+        showToast('Preencha todos os campos', 'warning');
         return;
     }
     
     if (novaSenha !== confirmarSenha) {
-        alert('⚠️ As novas senhas não coincidem');
+        showToast('As novas senhas não coincidem', 'warning');
         return;
     }
     
     if (novaSenha.length < 6) {
-        alert('⚠️ A nova senha deve ter pelo menos 6 caracteres');
+        showToast('A nova senha deve ter pelo menos 6 caracteres', 'warning');
         return;
     }
     
@@ -161,16 +161,16 @@ async function alterarSenha() {
         const result = await response.json();
         
         if (response.ok) {
-            alert('✅ Senha alterada com sucesso!');
+            showToast('Senha alterada com sucesso!', 'success');
             document.getElementById('senha_atual').value = '';
             document.getElementById('nova_senha').value = '';
             document.getElementById('confirmar_senha').value = '';
         } else {
-            alert('❌ Erro: ' + result.erro);
+            showToast(result.erro, 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        alert('❌ Erro ao alterar senha');
+            showToast('Erro ao alterar senha', 'error');
     }
 }
 

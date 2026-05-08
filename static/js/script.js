@@ -7,6 +7,25 @@ const ociPmaeHidden = document.getElementById('oci_pmae');
 let pacienteExistente = null;
 let modoEdicao = false;
 
+function mostrarErroCampo(id, mensagem) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('is-invalid');
+    let feedback = el.parentNode.querySelector('.invalid-feedback');
+    if (!feedback) {
+        feedback = document.createElement('div');
+        feedback.className = 'invalid-feedback';
+        el.parentNode.appendChild(feedback);
+    }
+    feedback.textContent = mensagem;
+}
+
+function limparErrosCampos() {
+    document.querySelectorAll('.is-invalid').forEach(function(el) {
+        el.classList.remove('is-invalid');
+    });
+}
+
 // Carregar unidade do usuário logado (fixa - sem seleção)
 async function carregarUnidadeUsuario() {
     try {
@@ -54,7 +73,7 @@ async function buscarPaciente() {
     const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
     
     if (!cpf || cpf.length !== 11) {
-        alert('⚠️ Digite um CPF válido com 11 dígitos');
+        showToast('Digite um CPF válido com 11 dígitos', 'warning');
         return;
     }
     
@@ -96,18 +115,13 @@ async function buscarPaciente() {
             
             // Mostrar procedimentos existentes
             const procedimentosExistentes = pacienteExistente.procedimentos || [];
-            let msg = `✅ Paciente encontrado!\n\nNome: ${pacienteExistente.nome_completo}\n`;
-            msg += `Procedimentos já realizados:\n`;
-            procedimentosExistentes.forEach((p, i) => {
-                if (typeof p === 'object' && p.nome) {
-                    msg += `${i + 1}. ${p.nome}\n`;
-                } else {
-                    msg += `${i + 1}. ${p}\n`;
-                }
-            });
-            msg += `\nDeseja adicionar um novo procedimento?`;
+            let procLista = procedimentosExistentes.map(function(p) {
+                return typeof p === 'object' && p.nome ? p.nome : p;
+            }).join('\n');
             
-            if (confirm(msg)) {
+            showToast('Paciente encontrado: ' + pacienteExistente.nome_completo + ' - Deseja adicionar novo procedimento?', 'info');
+            
+            if (confirm('✅ Paciente encontrado: ' + pacienteExistente.nome_completo + '\n\nProcedimentos já realizados:\n' + procLista + '\n\nDeseja adicionar um novo procedimento?')) {
                 document.getElementById('cpf').disabled = true;
                 document.getElementById('nome').disabled = true;
                 document.getElementById('data_nascimento').disabled = true;
@@ -134,6 +148,7 @@ async function buscarPaciente() {
         } else {
             modoEdicao = false;
             pacienteExistente = null;
+            showToast('Paciente não encontrado. Preencha os dados para novo cadastro.', 'warning');
             document.getElementById('mensagem').innerHTML = `
                 <div class="alert alert-warning">
                     ⚠️ Paciente não encontrado. Preencha os dados para novo cadastro.
@@ -145,11 +160,12 @@ async function buscarPaciente() {
         }
     } catch (error) {
         console.error('Erro:', error);
-        alert('❌ Erro ao buscar paciente');
+        showToast('Erro ao buscar paciente', 'error');
     }
 }
 
 function limparFormulario() {
+    limparErrosCampos();
     document.getElementById('cpf').disabled = false;
     document.getElementById('nome').disabled = false;
     document.getElementById('data_nascimento').disabled = false;
@@ -239,13 +255,47 @@ document.getElementById('nome_mae').addEventListener('input', function() {
     if (!this.disabled) this.value = this.value.toUpperCase(); 
 });
 
-// Mostrar procedimentos
+function atualizarOpcoesOlho() {
+    const olhoSelect = document.getElementById('olho');
+    const valorAtual = olhoSelect.value;
+    const isFaco = ociCirurgia.checked;
+    
+    olhoSelect.innerHTML = '<option value="">Selecione</option>';
+    
+    if (isFaco) {
+        olhoSelect.innerHTML += '<option value="OD">Olho Direito</option>';
+        olhoSelect.innerHTML += '<option value="OE">Olho Esquerdo</option>';
+    } else {
+        olhoSelect.innerHTML += '<option value="OD">Olho Direito</option>';
+        olhoSelect.innerHTML += '<option value="OE">Olho Esquerdo</option>';
+        olhoSelect.innerHTML += '<option value="AMBOS">Ambos os Olhos</option>';
+        olhoSelect.innerHTML += '<option value="SEM">Sem Indicação Cirúrgica</option>';
+    }
+    
+    if (valorAtual) olhoSelect.value = valorAtual;
+}
+
+// Mostrar procedimentos e marcar automaticamente
 ociAvaliacao.addEventListener('change', function() {
     if (this.checked) {
         divAvaliacao.style.display = 'block';
         divCirurgia.style.display = 'none';
         ociPmaeHidden.value = this.value;
-        document.getElementById('procedimento_cirurgia').checked = false;
+        
+        const procCirurgia = document.getElementById('procedimento_cirurgia');
+        if (procCirurgia) procCirurgia.checked = false;
+        
+        setTimeout(function() {
+            const divAvaliacaoEl = document.getElementById('procedimentos_avaliacao');
+            if (divAvaliacaoEl) {
+                const checkboxes = divAvaliacaoEl.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = true;
+                });
+            }
+        }, 50);
+        
+        atualizarOpcoesOlho();
     }
 });
 
@@ -254,81 +304,154 @@ ociCirurgia.addEventListener('change', function() {
         divAvaliacao.style.display = 'none';
         divCirurgia.style.display = 'block';
         ociPmaeHidden.value = this.value;
-        document.getElementById('procedimento_cirurgia').checked = true;
+        
+        const procCirurgia = document.getElementById('procedimento_cirurgia');
+        if (procCirurgia) procCirurgia.checked = true;
+        
+        const divAvaliacaoEl = document.getElementById('procedimentos_avaliacao');
+        if (divAvaliacaoEl) {
+            const checkboxes = divAvaliacaoEl.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function(checkbox) {
+                checkbox.checked = false;
+            });
+        }
+        
+        atualizarOpcoesOlho();
     }
 });
 
 function getProcedimentos() {
     const procedimentos = [];
+    
     if (ociAvaliacao.checked) {
+        procedimentos.push('09.05.01.003-5 - OCI DE AVALIAÇÃO INICIAL EM OFTALMOLOGIA');
+        
         document.querySelectorAll('#procedimentos_avaliacao .procedimento-check:checked').forEach(cb => {
             procedimentos.push(cb.getAttribute('data-procedimento'));
         });
     } else if (ociCirurgia.checked && document.getElementById('procedimento_cirurgia').checked) {
-        procedimentos.push(document.getElementById('procedimento_cirurgia').getAttribute('data-procedimento'));
+        const procCirurgia = document.getElementById('procedimento_cirurgia');
+        if (procCirurgia) {
+            procedimentos.push(procCirurgia.getAttribute('data-procedimento'));
+        }
     }
+    
     return procedimentos;
+}
+
+function validarFormulario() {
+    limparErrosCampos();
+    let valido = true;
+    
+    if (!document.getElementById('nome').value.trim()) {
+        mostrarErroCampo('nome', 'Nome do paciente é obrigatório');
+        valido = false;
+    }
+    if (!document.getElementById('cpf').value.replace(/\D/g, '')) {
+        mostrarErroCampo('cpf', 'CPF é obrigatório');
+        valido = false;
+    }
+    if (!document.getElementById('data_nascimento').value) {
+        mostrarErroCampo('data_nascimento', 'Data de nascimento é obrigatória');
+        valido = false;
+    }
+    if (!document.getElementById('nome_mae').value.trim()) {
+        mostrarErroCampo('nome_mae', 'Nome da mãe é obrigatório');
+        valido = false;
+    }
+    if (!document.getElementById('sexo').value) {
+        mostrarErroCampo('sexo', 'Selecione o sexo');
+        valido = false;
+    }
+    if (!document.getElementById('raca_cor').value) {
+        mostrarErroCampo('raca_cor', 'Selecione a raça/cor');
+        valido = false;
+    }
+    if (!document.getElementById('data_realizacao').value) {
+        mostrarErroCampo('data_realizacao', 'Data da realização é obrigatória');
+        valido = false;
+    }
+    if (!ociAvaliacao.checked && !ociCirurgia.checked) {
+        showToast('Selecione o tipo de OCI/PMAE', 'warning');
+        valido = false;
+    }
+    if (!document.getElementById('olho').value) {
+        mostrarErroCampo('olho', 'Selecione o olho');
+        valido = false;
+    }
+    
+    if (ociCirurgia.checked) {
+        const temProcedimentoAvaliacao = Array.from(document.querySelectorAll('#procedimentos_avaliacao .procedimento-check:checked')).length > 0;
+        if (temProcedimentoAvaliacao) {
+            showToast('Para CIRURGIA, não é permitido selecionar procedimentos de AVALIAÇÃO!', 'error');
+            valido = false;
+        }
+    }
+    
+    const procedimentos = getProcedimentos();
+    if ((ociAvaliacao.checked && procedimentos.length === 0) || (ociCirurgia.checked && procedimentos.length === 0)) {
+        showToast('Selecione pelo menos um procedimento', 'warning');
+        valido = false;
+    }
+    
+    return valido;
 }
 
 // Envio do formulário
 document.getElementById('formPaciente').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    if (!validarFormulario()) return;
+    
     const unidadeSalva = localStorage.getItem('unidade_selecionada');
     if (!unidadeSalva) {
-        alert('❌ Configure sua unidade nas Configurações primeiro!');
+        showToast('Configure sua unidade nas Configurações primeiro!', 'error');
         window.location.href = '/configuracoes';
         return;
     }
     
     const unidade = JSON.parse(unidadeSalva);
+    
     const procedimentos = getProcedimentos();
-    
-    if ((ociAvaliacao.checked && procedimentos.length === 0) || (ociCirurgia.checked && procedimentos.length === 0)) {
-        alert('❌ Selecione pelo menos um procedimento');
-        return;
-    }
-    
     const cpf = document.getElementById('cpf').value.replace(/\D/g, '');
     const dataRealizacao = document.getElementById('data_realizacao').value;
     
     const btn = document.querySelector('button[type="submit"]');
     btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Salvando...';
     
     try {
         if (modoEdicao && pacienteExistente) {
+            const olhoEdit = document.getElementById('olho').value;
+            
             const response = await fetch('/api/paciente/adicionar_procedimento', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     cpf: cpf,
                     procedimento: procedimentos[0],
-                    data_realizacao: dataRealizacao
+                    data_realizacao: dataRealizacao,
+                    olho: olhoEdit
                 })
             });
             
             const result = await response.json();
-            const msgDiv = document.getElementById('mensagem');
             
             if (response.ok) {
-                btn.innerHTML = '✅ Procedimento Adicionado!';
-                msgDiv.innerHTML = `<div class="alert alert-success">✅ ${result.mensagem}</div>`;
+                showToast(result.mensagem || 'Procedimento adicionado com sucesso!', 'success');
                 
                 divAvaliacao.style.display = 'none';
                 divCirurgia.style.display = 'none';
                 ociAvaliacao.checked = false;
                 ociCirurgia.checked = false;
                 document.getElementById('data_realizacao').value = '';
+                document.getElementById('olho').value = '';
                 
-                setTimeout(() => {
-                    msgDiv.innerHTML = '';
-                    btn.innerHTML = '💾 Cadastrar Paciente';
-                    btn.disabled = false;
-                }, 3000);
+                document.getElementById('mensagem').innerHTML = `<div class="alert alert-success">✅ ${result.mensagem}</div>`;
+                setTimeout(() => { document.getElementById('mensagem').innerHTML = ''; }, 3000);
             } else {
-                msgDiv.innerHTML = `<div class="alert alert-danger">❌ ${result.erro}</div>`;
-                btn.innerHTML = '💾 Cadastrar Paciente';
-                btn.disabled = false;
+                showToast(result.erro || 'Erro ao adicionar procedimento', 'error');
+                document.getElementById('mensagem').innerHTML = `<div class="alert alert-danger">❌ ${result.erro}</div>`;
             }
         } else {
             const dados = {
@@ -349,8 +472,6 @@ document.getElementById('formPaciente').addEventListener('submit', async (e) => 
                 contato: document.getElementById('contato') ? document.getElementById('contato').value : ''
             };
             
-            btn.innerHTML = '⏳ Cadastrando...';
-            
             const response = await fetch('/api/paciente', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -358,10 +479,9 @@ document.getElementById('formPaciente').addEventListener('submit', async (e) => 
             });
             
             const result = await response.json();
-            const msgDiv = document.getElementById('mensagem');
             
             if (response.ok) {
-                msgDiv.innerHTML = `<div class="alert alert-success">✅ ${result.mensagem}</div>`;
+                showToast(result.mensagem || 'Paciente cadastrado com sucesso!', 'success');
                 document.getElementById('formPaciente').reset();
                 divAvaliacao.style.display = 'none';
                 divCirurgia.style.display = 'none';
@@ -375,23 +495,27 @@ document.getElementById('formPaciente').addEventListener('submit', async (e) => 
                     document.getElementById('cep').disabled = false;
                     document.getElementById('contato').disabled = false;
                 }
-                
-                setTimeout(() => {
-                    msgDiv.innerHTML = '';
-                }, 3000);
+                document.getElementById('mensagem').innerHTML = `<div class="alert alert-success">✅ ${result.mensagem}</div>`;
+                setTimeout(() => { document.getElementById('mensagem').innerHTML = ''; }, 3000);
             } else {
-                msgDiv.innerHTML = `<div class="alert alert-danger">❌ ${result.erro}</div>`;
+                showToast(result.erro || 'Erro ao cadastrar', 'error');
+                document.getElementById('mensagem').innerHTML = `<div class="alert alert-danger">❌ ${result.erro}</div>`;
             }
-            btn.innerHTML = '💾 Cadastrar Paciente';
-            btn.disabled = false;
         }
     } catch (error) {
         console.error('Erro:', error);
+        showToast('Erro ao conectar com o servidor', 'error');
         document.getElementById('mensagem').innerHTML = `<div class="alert alert-danger">❌ Erro ao conectar</div>`;
-        btn.innerHTML = '💾 Cadastrar Paciente';
-        btn.disabled = false;
     }
+    
+    btn.innerHTML = '💾 Cadastrar Paciente';
+    btn.disabled = false;
 });
+
+// Carregar unidades ao iniciar (se o elemento existir)
+if (document.getElementById('unidadeExportar')) {
+    carregarUnidadesParaExportar();
+}
 
 // Carregar unidade do usuário ao iniciar
 carregarUnidadeUsuario();

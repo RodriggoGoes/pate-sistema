@@ -4,17 +4,21 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>📊 Dashboard - Procedimentos Oftalmológicos</h2>
-        <div>
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h2 class="mb-0">📊 Dashboard - Procedimentos Oftalmológicos</h2>
+        <div class="d-flex gap-2">
             {% if session.usuario_tipo == 'admin' %}
             <div class="btn-group">
                 <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
                     📊 Exportar
                 </button>
                 <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="#" onclick="exportarRelatorioExcel()">📋 Relatório Excel</a></li>
-                    <li><a class="dropdown-item" href="#" onclick="exportarRelatorioCSV()">📄 Relatório CSV</a></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modalExportarUnidade">🏥 Exportar por Unidade</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportarRelatorioExcel()">📋 Todos os Pacientes (Excel)</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportarRelatorioCSV()">📄 Todos os Pacientes (CSV)</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" onclick="exportarRelatorioCadastros()">📊 Relatório de Cadastros por Operador</a></li>
                 </ul>
             </div>
             {% endif %}
@@ -22,55 +26,61 @@
         </div>
     </div>
 
-    <!-- Cards Resumo -->
+    <!-- Cards Resumo com Skeleton Loading -->
     <div class="row">
         <div class="col-md-3">
             <div class="stat-card">
                 <h5>Total de Pacientes</h5>
-                <div class="stat-number" id="totalPacientes">0</div>
+                <div class="stat-number" id="totalPacientes"><span class="skeleton skeleton-number"></span></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
                 <h5>Últimos 30 Dias</h5>
-                <div class="stat-number" id="ultimos30Dias">0</div>
+                <div class="stat-number" id="ultimos30Dias"><span class="skeleton skeleton-number"></span></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
                 <h5>OCI OFTALMOLÓGICA</h5>
-                <div class="stat-number" id="totalAvaliacao">0</div>
+                <div class="stat-number" id="totalAvaliacao"><span class="skeleton skeleton-number"></span></div>
             </div>
         </div>
         <div class="col-md-3">
             <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
                 <h5>CIRURGIAS</h5>
-                <div class="stat-number" id="totalCirurgia">0</div>
+                <div class="stat-number" id="totalCirurgia"><span class="skeleton skeleton-number"></span></div>
             </div>
         </div>
     </div>
 
     <!-- Gráficos -->
     <div class="row">
-        <div class="col-md-6">
-            <div class="chart-container">
+        <div class="col-md-4">
+            <div class="chart-container" style="height: 300px;">
                 <h5>Distribuição por Sexo</h5>
                 <canvas id="graficoSexo"></canvas>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="chart-container">
+        <div class="col-md-4">
+            <div class="chart-container" style="height: 300px;">
                 <h5>Olho Operado</h5>
                 <canvas id="graficoOlho"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="chart-container" style="height: 300px;">
+                <h5>Tipo de OCI/PMAE</h5>
+                <canvas id="graficoOCI"></canvas>
             </div>
         </div>
     </div>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="chart-container">
-                <h5>Tipo de OCI/PMAE</h5>
-                <canvas id="graficoOCI"></canvas>
+        <div class="col-md-12">
+            <div class="chart-container" style="height: 400px;">
+                <h5>Distribuição por Raça/Cor</h5>
+                <canvas id="graficoRaca"></canvas>
             </div>
         </div>
     </div>
@@ -96,9 +106,18 @@
         </div>
     </div>
 
-    <!-- Últimos Registros -->
+    <!-- Últimos Registros com paginação e filtros -->
     <div class="chart-container">
-        <h5>Últimos 10 Registros</h5>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h5 class="mb-0">📋 Últimos Registros</h5>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <input type="text" id="filtroNome" class="form-control form-control-sm" placeholder="🔍 Buscar paciente..." style="width:180px">
+                <input type="date" id="filtroDataInicio" class="form-control form-control-sm" style="width:140px">
+                <input type="date" id="filtroDataFim" class="form-control form-control-sm" style="width:140px">
+                <button class="btn btn-sm btn-outline-primary" onclick="aplicarFiltrosDashboard()">Filtrar</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="limparFiltrosDashboard()">Limpar</button>
+            </div>
+        </div>
         <div class="table-responsive">
             <table class="table table-striped">
                 <thead class="table-dark">
@@ -108,35 +127,52 @@
                         <th>Unidade</th>
                         <th>OCI</th>
                         <th>Procedimento</th>
+                        <th>Olho</th>
                         <th>Data</th>
                     </tr>
                 </thead>
-                <tbody id="tabelaRegistros"></tbody>
+                <tbody id="tabelaRegistros">
+                    <tr><td colspan="7" class="text-center"><span class="skeleton skeleton-text" style="width:60%"></span></td></tr>
+                </tbody>
             </table>
+        </div>
+        <div id="paginacaoRegistros" class="pagination-controls">
+            <span class="page-info" id="pageInfo">Carregando...</span>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary" id="btnPaginaAnterior" onclick="paginaAnterior()" disabled>◀ Anterior</button>
+                <button class="btn btn-sm btn-outline-primary" id="btnPaginaProxima" onclick="paginaProxima()" disabled>Próxima ▶</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para selecionar unidade na exportação -->
+<div class="modal fade" id="modalExportarUnidade" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">🏥 Exportar por Unidade</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label"><strong>Selecione a Unidade Executora</strong></label>
+                    <select id="unidadeExportarModal" class="form-control">
+                        <option value="">-- Carregando unidades... --</option>
+                    </select>
+                    <small class="text-muted">Escolha a unidade e clique no formato desejado</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" id="btnExportarExcelModal">📊 Exportar Excel</button>
+                <button type="button" class="btn btn-info" id="btnExportarCSVModal">📄 Exportar CSV</button>
+            </div>
         </div>
     </div>
 </div>
 
 <style>
-    .stat-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        cursor: pointer;
-        transition: transform 0.3s;
-    }
-    .stat-card:hover { transform: translateY(-5px); }
-    .stat-number { font-size: 2.5rem; font-weight: bold; }
-    .chart-container {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
     .table-responsive {
         max-height: 400px;
         overflow-y: auto;
@@ -145,185 +181,297 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    let chartSexo, chartOlho, chartOCI;
+    let chartSexo, chartOlho, chartOCI, chartRaca;
+    let todosProcedimentos = [];
+    let paginaAtual = 1;
+    const ITENS_POR_PAGINA = 10;
+
+    function formatarData(data) {
+        if (!data) return '-';
+        try {
+            const d = new Date(data);
+            if (!isNaN(d.getTime())) return d.toLocaleDateString('pt-BR');
+            return data;
+        } catch(e) { return data; }
+    }
+
+    function mostrarSkeletonCards() {
+        document.querySelectorAll('.stat-number').forEach(function(el) {
+            el.innerHTML = '<span class="skeleton skeleton-number"></span>';
+        });
+        document.getElementById('tabelaRegistros').innerHTML = '<tr><td colspan="7" class="text-center"><span class="skeleton skeleton-text" style="width:60%"></span></td></tr>';
+        document.getElementById('tabelaUnidades').innerHTML = '<tr><td colspan="5" class="text-center"><span class="skeleton skeleton-text" style="width:40%"></span></td></tr>';
+    }
 
     async function carregarDados() {
+        mostrarSkeletonCards();
         try {
             const response = await fetch('/api/dashboard/stats');
             const stats = await response.json();
-            
+
+            const unidadeNomeSpan = document.getElementById('unidadeNomeAtual');
+            if (unidadeNomeSpan) {
+                unidadeNomeSpan.textContent = stats.usuario_tipo === 'admin' ? 'Todas as Unidades (Admin)' : (stats.unidade_nome || 'Sua Unidade');
+            }
+
             document.getElementById('totalPacientes').textContent = stats.total_pacientes;
             document.getElementById('ultimos30Dias').textContent = stats.ultimos_30_dias;
             document.getElementById('totalAvaliacao').textContent = stats.oci['OCI OFTALMOLOGICA'] || 0;
             document.getElementById('totalCirurgia').textContent = stats.oci['CIRURGIAS'] || 0;
-            
-            // Gráfico de sexo
+
             if (chartSexo) chartSexo.destroy();
             chartSexo = new Chart(document.getElementById('graficoSexo'), {
                 type: 'pie',
                 data: {
                     labels: ['Masculino', 'Feminino'],
-                    datasets: [{
-                        data: [stats.sexo.MASCULINO, stats.sexo.FEMININO],
-                        backgroundColor: ['#36a2eb', '#ff6384']
-                    }]
+                    datasets: [{ data: [stats.sexo.MASCULINO, stats.sexo.FEMININO], backgroundColor: ['#36a2eb', '#ff6384'] }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return `${context.label}: ${context.raw} paciente(s)`;
-                                }
-                            }
-                        }
-                    }
-                }
+                options: { responsive: true, plugins: { tooltip: { callbacks: { label: function(ctx) { return ctx.label + ': ' + ctx.raw + ' paciente(s)'; } } } } }
             });
-            
-            // Gráfico de olho
+
             if (chartOlho) chartOlho.destroy();
             chartOlho = new Chart(document.getElementById('graficoOlho'), {
                 type: 'doughnut',
                 data: {
                     labels: ['Direito', 'Esquerdo', 'Ambos', 'Sem'],
-                    datasets: [{
-                        data: [stats.olho.OD, stats.olho.OE, stats.olho.AMBOS, stats.olho.SEM],
-                        backgroundColor: ['#4bc0c0', '#ff9f40', '#ff6384', '#36a2eb']
-                    }]
+                    datasets: [{ data: [stats.olho.OD, stats.olho.OE, stats.olho.AMBOS, stats.olho.SEM], backgroundColor: ['#4bc0c0', '#ff9f40', '#ff6384', '#36a2eb'] }]
                 }
             });
-            
-            // Gráfico de OCI
-            if (chartOCI) chartOCI.destroy();
-            chartOCI = new Chart(document.getElementById('graficoOCI'), {
+
+            if (chartRaca) chartRaca.destroy();
+            chartRaca = new Chart(document.getElementById('graficoRaca'), {
                 type: 'bar',
                 data: {
-                    labels: ['OCI OFTALMOLÓGICA', 'CIRURGIAS'],
+                    labels: ['Branca', 'Preta', 'Parda', 'Indígena'],
                     datasets: [{
-                        label: 'Quantidade',
-                        data: [stats.oci['OCI OFTALMOLOGICA'] || 0, stats.oci['CIRURGIAS'] || 0],
-                        backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(255, 99, 132, 0.5)'],
-                        borderColor: ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)'],
+                        label: 'Quantidade de Pacientes',
+                        data: [stats.raca_cor['01 - Branca'] || 0, stats.raca_cor['02 - Preta'] || 0, stats.raca_cor['03 - Parda'] || 0, stats.raca_cor['04 - Indígena'] || 0],
+                        backgroundColor: ['rgba(255, 206, 86, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(153, 102, 255, 0.7)', 'rgba(75, 192, 192, 0.7)'],
+                        borderColor: ['rgba(255, 206, 86, 1)', 'rgba(54, 162, 235, 1)', 'rgba(153, 102, 255, 1)', 'rgba(75, 192, 192, 1)'],
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    }
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Quantidade de Pacientes' } }, x: { title: { display: true, text: 'Raça/Cor' } } },
+                    plugins: { legend: { position: 'top' } }
                 }
             });
-            
+
+            if (chartOCI) chartOCI.destroy();
+            chartOCI = new Chart(document.getElementById('graficoOCI'), {
+                type: 'bar',
+                data: {
+                    labels: ['OCI OFTALMOLÓGICA', 'CIRURGIAS'],
+                    datasets: [{ label: 'Quantidade', data: [stats.oci['OCI OFTALMOLOGICA'] || 0, stats.oci['CIRURGIAS'] || 0], backgroundColor: ['rgba(54, 162, 235, 0.5)', 'rgba(255, 99, 132, 0.5)'], borderColor: ['rgba(54, 162, 235, 1)', 'rgba(255, 99, 132, 1)'], borderWidth: 1 }]
+                },
+                options: { responsive: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
             await carregarUnidadesStats();
             await carregarUltimosRegistros();
         } catch (error) {
             console.error('Erro ao carregar dashboard:', error);
+            showToast('Erro ao carregar dados do dashboard', 'error');
         }
     }
-    
+
     async function carregarUnidadesStats() {
         try {
             const response = await fetch('/api/dashboard/unidades_stats');
             const unidades = await response.json();
-            
             const tbody = document.getElementById('tabelaUnidades');
             tbody.innerHTML = '';
-            
+
             if (unidades.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="5" class="text-center">Nenhum dado encontrado</td></tr>';
                 return;
             }
-            
+
             for (const unidade of unidades) {
                 const row = tbody.insertRow();
                 row.insertCell(0).textContent = unidade.nome || '-';
                 row.insertCell(1).textContent = unidade.municipio || '-';
-                
                 const celOci = row.insertCell(2);
                 celOci.textContent = unidade.oci_oftalmologica || 0;
-                if (unidade.oci_oftalmologica > 0) {
-                    celOci.className = 'text-primary fw-bold';
-                }
-                
+                if (unidade.oci_oftalmologica > 0) celOci.className = 'text-primary fw-bold';
                 const celCirurgia = row.insertCell(3);
                 celCirurgia.textContent = unidade.cirurgias || 0;
-                if (unidade.cirurgias > 0) {
-                    celCirurgia.className = 'text-success fw-bold';
-                }
-                
+                if (unidade.cirurgias > 0) celCirurgia.className = 'text-success fw-bold';
                 const celTotal = row.insertCell(4);
                 celTotal.textContent = unidade.total || 0;
                 celTotal.className = 'fw-bold';
             }
         } catch (error) {
-            console.error('Erro ao carregar estatísticas das unidades:', error);
+            console.error('Erro ao carregar unidades:', error);
             document.getElementById('tabelaUnidades').innerHTML = '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar dados</td></tr>';
         }
     }
-    
+
     async function carregarUltimosRegistros() {
         try {
             const response = await fetch('/api/pacientes');
             const pacientes = await response.json();
-            const tbody = document.getElementById('tabelaRegistros');
-            tbody.innerHTML = '';
-            
-            const ultimos10 = pacientes.slice(0, 10);
-            for (const p of ultimos10) {
-                const row = tbody.insertRow();
-                row.insertCell(0).textContent = p.nome_completo || '-';
-                row.insertCell(1).textContent = p.idade || '-';
-                row.insertCell(2).textContent = p.nome_estabelecimento ? p.nome_estabelecimento.substring(0, 30) : '-';
-                
-                let ociText = '-';
-                if (p.oci_pmae === '09.05.01.003-5') {
-                    ociText = 'OCI OFTALMOLÓGICA';
-                } else if (p.oci_pmae === '04.05.05.037-2') {
-                    ociText = 'CIRURGIA';
-                }
-                row.insertCell(3).textContent = ociText;
-                
-                let procedimentoText = '-';
+            todosProcedimentos = [];
+
+            for (const p of pacientes) {
                 if (p.procedimentos && p.procedimentos.length > 0) {
-                    const primeiroProc = p.procedimentos[0];
-                    if (typeof primeiroProc === 'object' && primeiroProc.nome) {
-                        procedimentoText = primeiroProc.nome.substring(0, 40);
-                    } else if (typeof primeiroProc === 'string') {
-                        procedimentoText = primeiroProc.substring(0, 40);
+                    for (const proc of p.procedimentos) {
+                        let nomeProc = '';
+                        let dataProc = '';
+                        if (typeof proc === 'object' && proc.nome) { nomeProc = proc.nome; dataProc = proc.data_realizacao || p.data_realizacao; }
+                        else if (typeof proc === 'string') { nomeProc = proc; dataProc = p.data_realizacao; }
+
+                        let isPrincipal = false;
+                        let tipo = '';
+                        let descricao = '';
+
+                        if (nomeProc.includes('09.05.01.003-5')) { isPrincipal = true; tipo = 'OCI OFTALMOLÓGICA'; descricao = 'OCI DE AVALIAÇÃO INICIAL EM OFTALMOLOGIA'; }
+                        else if (nomeProc.includes('04.05.05.037-2')) { isPrincipal = true; tipo = 'CIRURGIA'; descricao = 'FACOEMULSIFICAÇÃO COM IMPLANTE DE LENTE INTRA-OCULAR DOBRAVEL'; }
+                        else if (nomeProc.includes('OCI DE AVALIAÇÃO')) { isPrincipal = true; tipo = 'OCI OFTALMOLÓGICA'; descricao = 'OCI DE AVALIAÇÃO INICIAL EM OFTALMOLOGIA'; }
+                        else if (nomeProc.includes('FACOEMULSIFICAÇÃO')) { isPrincipal = true; tipo = 'CIRURGIA'; descricao = 'FACOEMULSIFICAÇÃO COM IMPLANTE DE LENTE INTRA-OCULAR DOBRAVEL'; }
+
+                        if (isPrincipal) {
+                            let unidadeProc = typeof proc === 'object' && proc.nome_estabelecimento ? proc.nome_estabelecimento : (p.nome_estabelecimento || '');
+                            let olhoProc = typeof proc === 'object' && proc.olho ? proc.olho : (p.olho || '');
+                            todosProcedimentos.push({
+                                nome: p.nome_completo,
+                                idade: p.idade,
+                                unidade: unidadeProc,
+                                olho: olhoProc,
+                                tipo: tipo,
+                                procedimento: descricao,
+                                data: dataProc
+                            });
+                        }
                     }
                 }
-                row.insertCell(4).textContent = procedimentoText;
-                
-                let dataText = '-';
-                if (p.data_realizacao) {
-                    try {
-                        dataText = new Date(p.data_realizacao).toLocaleDateString('pt-BR');
-                    } catch(e) {
-                        dataText = p.data_realizacao;
-                    }
-                }
-                row.insertCell(5).textContent = dataText;
             }
+
+            todosProcedimentos.sort(function(a, b) { return new Date(b.data) - new Date(a.data); });
+            paginaAtual = 1;
+            aplicarFiltrosDashboard();
         } catch (error) {
-            console.error('Erro ao carregar últimos registros:', error);
+            console.error('Erro ao carregar registros:', error);
+            document.getElementById('tabelaRegistros').innerHTML = '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar dados</td></tr>';
         }
     }
-    
-    function exportarRelatorioExcel() { 
-        window.location.href = '/api/exportar/relatorio_excel'; 
+
+    function aplicarFiltrosDashboard() {
+        const filtroNome = (document.getElementById('filtroNome').value || '').toLowerCase().trim();
+        const filtroDataInicio = document.getElementById('filtroDataInicio').value;
+        const filtroDataFim = document.getElementById('filtroDataFim').value;
+
+        let filtrados = todosProcedimentos;
+
+        if (filtroNome) {
+            filtrados = filtrados.filter(function(item) { return item.nome.toLowerCase().includes(filtroNome); });
+        }
+        if (filtroDataInicio) {
+            filtrados = filtrados.filter(function(item) { return item.data >= filtroDataInicio; });
+        }
+        if (filtroDataFim) {
+            filtrados = filtrados.filter(function(item) { return item.data <= filtroDataFim; });
+        }
+
+        paginaAtual = 1;
+        renderizarTabela(filtrados);
     }
-    
-    function exportarRelatorioCSV() { 
-        window.location.href = '/api/exportar/relatorio_csv'; 
+
+    function limparFiltrosDashboard() {
+        document.getElementById('filtroNome').value = '';
+        document.getElementById('filtroDataInicio').value = '';
+        document.getElementById('filtroDataFim').value = '';
+        paginaAtual = 1;
+        renderizarTabela(todosProcedimentos);
     }
-    
-    // Carregar dados ao iniciar
+
+    function renderizarTabela(dados) {
+        const tbody = document.getElementById('tabelaRegistros');
+        tbody.innerHTML = '';
+
+        const totalPaginas = Math.ceil(dados.length / ITENS_POR_PAGINA) || 1;
+        if (paginaAtual > totalPaginas) paginaAtual = totalPaginas;
+
+        const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA;
+        const fim = inicio + ITENS_POR_PAGINA;
+        const paginaDados = dados.slice(inicio, fim);
+
+        if (paginaDados.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum procedimento encontrado</td></tr>';
+        } else {
+            for (const item of paginaDados) {
+                const row = tbody.insertRow();
+                row.insertCell(0).textContent = item.nome || '-';
+                row.insertCell(1).textContent = item.idade || '-';
+                row.insertCell(2).textContent = item.unidade ? item.unidade.substring(0, 35) : '-';
+                row.insertCell(3).textContent = item.tipo || '-';
+                row.insertCell(4).textContent = item.procedimento || '-';
+                row.insertCell(5).textContent = item.olho || '-';
+                row.insertCell(6).textContent = formatarData(item.data);
+            }
+        }
+
+        document.getElementById('pageInfo').textContent = dados.length + ' registro(s) - Página ' + paginaAtual + ' de ' + totalPaginas;
+        document.getElementById('btnPaginaAnterior').disabled = paginaAtual <= 1;
+        document.getElementById('btnPaginaProxima').disabled = paginaAtual >= totalPaginas;
+    }
+
+    function paginaAnterior() {
+        if (paginaAtual > 1) { paginaAtual--; renderizarTabela(todosProcedimentos); }
+    }
+
+    function paginaProxima() {
+        const totalPaginas = Math.ceil(todosProcedimentos.length / ITENS_POR_PAGINA);
+        if (paginaAtual < totalPaginas) { paginaAtual++; renderizarTabela(todosProcedimentos); }
+    }
+
+    function exportarRelatorioExcel() { window.location.href = '/api/exportar/relatorio_excel'; }
+    function exportarRelatorioCSV() { window.location.href = '/api/exportar/relatorio_csv'; }
+    function exportarRelatorioCadastros() { window.location.href = '/api/exportar/relatorio_cadastros'; }
+
+    async function carregarUnidadesModal() {
+        try {
+            const response = await fetch('/api/unidades/lista_para_exportar');
+            const unidades = await response.json();
+            const select = document.getElementById('unidadeExportarModal');
+            if (select) {
+                select.innerHTML = '<option value="">-- Selecione uma unidade --</option>';
+                unidades.forEach(function(unidade) {
+                    const option = document.createElement('option');
+                    option.value = unidade._id;
+                    option.textContent = unidade.nome + ' (' + unidade.municipio + ') - ' + unidade.total_pacientes + ' paciente(s)';
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Erro ao carregar unidades:', error);
+        }
+    }
+
+    document.getElementById('btnExportarExcelModal')?.addEventListener('click', function() {
+        const unidadeId = document.getElementById('unidadeExportarModal')?.value;
+        if (!unidadeId) { showToast('Selecione uma unidade primeiro!', 'warning'); return; }
+        window.location.href = '/api/exportar/relatorio_excel/unidade/' + unidadeId;
+        bootstrap.Modal.getInstance(document.getElementById('modalExportarUnidade')).hide();
+    });
+
+    document.getElementById('btnExportarCSVModal')?.addEventListener('click', function() {
+        const unidadeId = document.getElementById('unidadeExportarModal')?.value;
+        if (!unidadeId) { showToast('Selecione uma unidade primeiro!', 'warning'); return; }
+        window.location.href = '/api/exportar/relatorio_csv/unidade/' + unidadeId;
+        bootstrap.Modal.getInstance(document.getElementById('modalExportarUnidade')).hide();
+    });
+
+    const modalExportar = document.getElementById('modalExportarUnidade');
+    if (modalExportar) {
+        modalExportar.addEventListener('show.bs.modal', function() { carregarUnidadesModal(); });
+    }
+
+    // Event listeners para filtros com Enter
+    document.getElementById('filtroNome')?.addEventListener('keyup', function(e) { if (e.key === 'Enter') aplicarFiltrosDashboard(); });
+
     carregarDados();
-    
-    // Atualizar a cada 30 segundos
-    setInterval(carregarDados, 30000);
+    setInterval(carregarDados, 60000);
 </script>
 {% endblock %}

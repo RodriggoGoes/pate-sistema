@@ -31,7 +31,7 @@
                         </tr>
                     </thead>
                     <tbody id="tabelaUsuarios">
-                        <tr><td colspan="6" class="text-center">Carregando...<\/td></tr>
+                        <tr><td colspan="6" class="text-center"><span class="skeleton skeleton-text" style="width:40%"></span><\/td></tr>
                     </tbody>
                 </table>
             </div>
@@ -168,17 +168,17 @@ async function resetarSenha() {
     const confirmarSenha = document.getElementById('confirmar_nova_senha').value;
     
     if (!novaSenha) {
-        alert('Digite uma nova senha');
+        showToast('Digite uma nova senha', 'warning');
         return;
     }
     
     if (novaSenha !== confirmarSenha) {
-        alert('As senhas não coincidem');
+        showToast('As senhas não coincidem', 'warning');
         return;
     }
     
     if (novaSenha.length < 6) {
-        alert('A senha deve ter pelo menos 6 caracteres');
+        showToast('A senha deve ter pelo menos 6 caracteres', 'warning');
         return;
     }
     
@@ -192,15 +192,15 @@ async function resetarSenha() {
         const result = await response.json();
         
         if (response.ok) {
-            alert('✅ Senha alterada com sucesso!');
+            showToast('Senha alterada com sucesso!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('modalResetSenha')).hide();
             carregarUsuarios();
         } else {
-            alert('❌ Erro: ' + result.erro);
+            showToast(result.erro, 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        alert('❌ Erro ao resetar senha');
+        showToast('Erro ao resetar senha', 'error');
     }
 }
 
@@ -233,12 +233,12 @@ async function salvarUsuario() {
     };
     
     if (!dados.nome || !dados.email || !dados.senha) {
-        alert('Preencha todos os campos obrigatórios!');
+        showToast('Preencha todos os campos obrigatórios!', 'warning');
         return;
     }
     
     if (dados.senha.length < 6) {
-        alert('A senha deve ter pelo menos 6 caracteres');
+        showToast('A senha deve ter pelo menos 6 caracteres', 'warning');
         return;
     }
     
@@ -252,16 +252,16 @@ async function salvarUsuario() {
         const result = await response.json();
         
         if (response.ok) {
-            alert('Usuário criado com sucesso!');
+            showToast('Usuário criado com sucesso!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('modalUsuario')).hide();
             document.getElementById('formUsuario').reset();
             carregarUsuarios();
         } else {
-            alert('Erro: ' + result.erro);
+            showToast(result.erro, 'error');
         }
     } catch (error) {
         console.error('Erro:', error);
-        alert('Erro ao salvar usuário');
+        showToast('Erro ao salvar usuário', 'error');
     }
 }
 
@@ -275,10 +275,10 @@ async function desativarUsuario(usuarioId) {
             const result = await response.json();
             
             if (response.ok) {
-                alert('Usuário desativado com sucesso!');
+                showToast('Usuário desativado com sucesso!', 'success');
                 carregarUsuarios();
             } else {
-                alert('Erro: ' + result.erro);
+                showToast(result.erro, 'error');
             }
         } catch (error) {
             console.error('Erro:', error);

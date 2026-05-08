@@ -55,6 +55,14 @@ class UnidadeExecutor:
         )
     
     @staticmethod
+    def reativar(unidade_id):
+        """Reativa uma unidade"""
+        return UnidadeExecutor.colecao.update_one(
+            {'_id': ObjectId(unidade_id)},
+            {'$set': {'ativa': True}}
+        )
+    
+    @staticmethod
     def get_unidade_padrao():
         """Retorna a primeira unidade ativa"""
         unidade = UnidadeExecutor.colecao.find_one({'ativa': True})
